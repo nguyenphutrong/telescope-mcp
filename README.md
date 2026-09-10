@@ -6,15 +6,14 @@ Repository: [nguyenphutrong/telescope-mcp](https://github.com/nguyenphutrong/tel
 
 ## Installation in a Laravel application
 
-`v0.1.0` is the initial experimental release. Packagist registration is pending; install the tagged release directly from GitHub for now:
+`v0.1.0` is the initial experimental release, available on [Packagist](https://packagist.org/packages/nguyenphutrong/telescope-mcp):
 
 ```bash
 # Run in your Laravel application directory, not the package directory.
-composer config repositories.telescope-mcp '{"type":"vcs","url":"https://github.com/nguyenphutrong/telescope-mcp"}'
 composer require --dev nguyenphutrong/telescope-mcp:^0.1.0
 ```
 
-Once the package is indexed on Packagist, only the `composer require` command is needed. For local package development, use a path repository instead:
+No custom Composer repository is needed. For local package development, use a path repository instead:
 
 ```bash
 composer config repositories.telescope-mcp '{"type":"path","url":"/absolute/path/to/telescope-mcp","options":{"versions":{"nguyenphutrong/telescope-mcp":"dev-main"}}}'

@@ -2,7 +2,7 @@
 
 ## 0.1.0 — 2026-09-10
 
-Initial experimental release for local development. Available from the GitHub tag; Packagist registration is pending.
+Initial experimental release for local development. Available from the GitHub tag and Packagist.
 
 ### Added
 
