@@ -6,10 +6,17 @@ Repository: [nguyenphutrong/telescope-mcp](https://github.com/nguyenphutrong/tel
 
 ## Installation in a Laravel application
 
-This package is **not published yet**. To try it, use a Composer path repository pointing to this checkout:
+`v0.1.0` is the initial experimental release. Packagist registration is pending; install the tagged release directly from GitHub for now:
 
 ```bash
 # Run in your Laravel application directory, not the package directory.
+composer config repositories.telescope-mcp '{"type":"vcs","url":"https://github.com/nguyenphutrong/telescope-mcp"}'
+composer require --dev nguyenphutrong/telescope-mcp:^0.1.0
+```
+
+Once the package is indexed on Packagist, only the `composer require` command is needed. For local package development, use a path repository instead:
+
+```bash
 composer config repositories.telescope-mcp '{"type":"path","url":"/absolute/path/to/telescope-mcp","options":{"versions":{"nguyenphutrong/telescope-mcp":"dev-main"}}}'
 composer require --dev nguyenphutrong/telescope-mcp:dev-main
 ```
@@ -146,6 +153,6 @@ composer test
 vendor/bin/phpunit --filter test_real_stdio
 ```
 
-Tests cover the real SQLite repository, nonconsecutive and large sequences, interleaved batches, hidden entries, OR tag matching, validation, missing UUIDs, nested sensitive structures, Unicode and output budgets without skipped entries, cache failures, recording state, storage errors, disabled/nonlocal configurations, and child PHP processes using SDK stdio. The Artisan fixture uses Testbench without mocking the transport. Auto-discovery has also been checked manually through a Composer path installation in a clean Laravel application.
+Tests cover the real SQLite repository, nonconsecutive and large sequences, interleaved batches, hidden entries, OR tag matching, validation, missing UUIDs, nested sensitive structures, Unicode and output budgets without skipped entries, cache failures, recording state, storage errors, disabled/nonlocal configurations, and child PHP processes using SDK stdio. The Artisan fixture uses Testbench without mocking the transport. A clean Laravel application installed from the GitHub VCS repository has also passed discovery, stdio calls, pagination, redaction, and unchanged-database checks using the published package name.
 
-HTTP tokens, OAuth, authorization, rate limits, time/status/slow-query filters, resources, and prompts are deferred to a later phase. There is no UI. The package has not been published or released.
+See [CHANGELOG.md](CHANGELOG.md) for release notes and limitations. HTTP tokens, OAuth, authorization, rate limits, time/status/slow-query filters, resources, and prompts are deferred to a later phase. There is no UI.
