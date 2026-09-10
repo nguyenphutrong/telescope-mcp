@@ -132,9 +132,11 @@ Summary strings are capped at 160 encoded JSON bytes each; detail strings at 204
 
 ## Versions and testing
 
-Composer constraints: PHP `^8.2`, Telescope `^5.24`, and MCP `^0.9.5` (MCP 1.x is not accepted automatically). The SDK sets the Laravel version floor: 11.45.3+, 12.41.1+, or 13.x. Laravel 13 requires a PHP version supported by that framework release. Package tests use Testbench 10 and PHPUnit 11.
+Composer constraints: PHP `^8.2`, Laravel `^12.61.1|^13.12`, Telescope `^5.24`, and MCP `^0.9.5` (MCP 1.x is not accepted automatically). Laravel 13 requires PHP 8.3 or later. Package tests use Testbench 10/11 and PHPUnit 11.
 
-Tested with PHP **8.2.33**, Laravel **12.69.2**, Telescope **5.24.0**, MCP **0.9.5**, and disposable SQLite databases. Laravel 11/13, other PHP versions, and MySQL/PostgreSQL have not been tested. The `nguyenphutrong/telescope` fork uses `5.x` as its default branch and the same Composer package identity, `laravel/telescope`; no repository override is added to install the fork.
+CI resolves the latest compatible dependencies for Laravel 12 on PHP 8.2/8.4 and Laravel 13 on PHP 8.3/8.4, using disposable SQLite databases. Local verification uses PHP **8.2.33**, Laravel **12.69.2**, Telescope **5.24.0**, and MCP **0.9.5**. MySQL/PostgreSQL and exact minimum dependency versions have not been tested.
+
+Laravel 11 is not supported: although the tools passed compatibility tests on 11.56.1, modern Composer blocks that release because of unresolved framework security advisories. The Laravel floors above exclude the affected versions identified during release preparation. Do not disable Composer's security checks to install this package. No repository override or Telescope fork is required.
 
 ```bash
 composer install
