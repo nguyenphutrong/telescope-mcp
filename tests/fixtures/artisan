@@ -1,0 +1,12 @@
+#!/usr/bin/env php
+<?php
+
+require dirname(__DIR__, 2).'/vendor/autoload.php';
+
+$fixture = new class('stdio') extends \TelescopeMcp\Tests\Application {};
+$app = $fixture->createApplication();
+$kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
+$input = new \Symfony\Component\Console\Input\ArgvInput;
+$status = $kernel->handle($input, new \Symfony\Component\Console\Output\ConsoleOutput);
+$kernel->terminate($input, $status);
+exit($status);
