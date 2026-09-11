@@ -6,11 +6,11 @@ Repository: [nguyenphutrong/telescope-mcp](https://github.com/nguyenphutrong/tel
 
 ## Installation in a Laravel application
 
-`v0.1.0` is the initial experimental release, available on [Packagist](https://packagist.org/packages/nguyenphutrong/telescope-mcp):
+Install the experimental `v0.2.0` release from [Packagist](https://packagist.org/packages/nguyenphutrong/telescope-mcp):
 
 ```bash
 # Run in your Laravel application directory, not the package directory.
-composer require --dev nguyenphutrong/telescope-mcp:^0.1.0
+composer require --dev nguyenphutrong/telescope-mcp:^0.2.0
 ```
 
 No custom Composer repository is needed. For local package development, use a path repository instead:
@@ -75,6 +75,7 @@ Input `{}`. Output:
 ```json
 {
   "enabled": true,
+  "allow_sensitive_data": false,
   "recording_paused": false,
   "pause_state_known": true,
   "mcp_recording_suppressed": true,
@@ -114,7 +115,7 @@ The batch filter returns requests, queries, logs, jobs, and exceptions in the sa
 
 Input: `{"id":"full-UUID"}`; prefixes are not supported. Output: `{entry: {...}}`. The tool does not load the batch automatically. Each entry contains `id`, `batch_id`, `type`, `created_at` (the timestamp stored by Telescope, without assigning a new timezone), `family_hash` (a hex/UUID-like value of at most 64 characters, or null), `fields`, `truncated`, and `redacted`.
 
-`fields` is an object containing allowlisted scalar values; missing and nested values are omitted:
+By default, `fields` is an object containing allowlisted scalar values; missing and nested values are omitted:
 
 | Type | Retained fields |
 | --- | --- |
@@ -125,13 +126,56 @@ Input: `{"id":"full-UUID"}`; prefixes are not supported. Output: `{entry: {...}}
 | job | status, name, tries, timeout |
 | Other types | Metadata only, with `fields: {}` |
 
-Summary strings are capped at 160 encoded JSON bytes each; detail strings at 2048 bytes. Truncated strings receive an additional `…[truncated]` marker and a flag. Truncation preserves UTF-8 boundaries and accounts for escaped Unicode and control characters. Lists have a 24,000-byte budget for the total encoded entries, measured conservatively using escaped JSON, plus a small fixed wrapper. The SDK duplicates the data in text content and `structuredContent`. Under standard Telescope contracts, the complete JSON-RPC tool result stays below 64 KiB, including detail responses. Page-level `truncated` means fewer entries were returned because of the budget; `entry.truncated` means text was shortened. `redacted=true` means the policy was applied, **not that the output is guaranteed to contain no secrets**.
+Summary strings are capped at 160 encoded JSON bytes each; default detail strings at 2048 bytes. Truncated strings receive an additional `…[truncated]` marker and a flag. Truncation preserves UTF-8 boundaries and accounts for escaped Unicode and control characters. Lists have a 24,000-byte budget for the total encoded entries, measured conservatively using escaped JSON, plus a small fixed wrapper. The SDK duplicates the data in text content and `structuredContent`. Under standard Telescope contracts, the complete JSON-RPC tool result stays below 64 KiB, including detail responses. Page-level `truncated` means fewer entries were returned because of the budget; `entry.truncated` means text was shortened. `redacted=true` means the policy was applied, **not that the output is guaranteed to contain no secrets**.
+
+### Unredacted access
+
+The configuration has two switches, both disabled by default:
+
+```php
+return [
+    'enabled' => env('TELESCOPE_MCP_ENABLED', false),
+    'allow_sensitive_data' => env('TELESCOPE_MCP_ALLOW_SENSITIVE_DATA', false),
+];
+```
+
+To grant sensitive-data access in your local application:
+
+```dotenv
+APP_ENV=local
+TELESCOPE_MCP_ENABLED=true
+TELESCOPE_MCP_ALLOW_SENSITIVE_DATA=true
+```
+
+**This grants access to stored secrets and personal data, which the AI client may send to its model provider.** Only boolean `true` grants permission. Clients cannot grant it through tool arguments. Status reports the effective `allow_sensitive_data` permission. Normal get/list calls remain redacted even when permission is enabled; there are no per-group `include` options.
+
+The agent must explicitly call `telescope_get_entry` with:
+
+```json
+{"id":"12345678-1234-4234-8234-123456789abc","unredacted":true}
+```
+
+`unredacted` accepts only a JSON boolean, defaults to `false`, and does not accept null. Without permission, the request returns an error before reading storage. With permission, the output is `{unredacted_entry: {id, batch_id, redacted: false, encoding: "json", data, next_cursor, has_more}}` instead of `{entry: ...}`.
+
+The `data` string is a chunk of the complete JSON representation supplied by Telescope's repository: metadata, tags and all `content` fields, including headers, sessions, payloads, response bodies, SQL, context, job data, user information and trace arguments where recorded. Nothing is masked or permanently truncated. This is not a byte-for-byte database export: Telescope's repository decodes stored JSON and its `find()` returns `sequence=null`. Data already redacted, omitted or pruned by Telescope cannot be recovered.
+
+**Read all chunks before parsing the entry:**
+
+1. Append each response's `data` string in order, without adding separators or unescaping it again.
+2. While `has_more=true`, call the same tool with the same `id`, `unredacted=true`, and `cursor` set to the returned `next_cursor`.
+3. When `has_more=false` and `next_cursor=null`, parse the concatenated string as JSON. A single chunk is not necessarily standalone JSON; it can split an escape sequence.
+
+Chunks contain at most 8192 bytes of ASCII-escaped JSON, so each response remains valid UTF-8 and below 64 KiB including SDK duplication. The cursor is opaque and distinct from list pagination cursors. It is bound to the entry representation: a changed entry or a cursor from another entry produces a stale-cursor error; restart from the beginning. Pruned entries return not-found. Permission is checked on every chunk. Cursors work across MCP process restarts, but do not retain a database snapshot.
+
+Chunking bounds responses, not memory used to load an entry. The repository still loads one complete record on each call; exceptionally large records can exceed application memory limits. Reads do not execute SQL from the entry, unserialize jobs, or load the whole batch.
+
+If configuration was already published, add `allow_sensitive_data` manually and remove any old `include` section. Refresh any application config cache and restart the MCP client process after granting or revoking permission; an existing process keeps its loaded configuration. Data already delivered cannot be revoked.
 
 ## Trust boundary and privacy
 
 - Stdio access is limited by OS permissions to run the application; there is no inherent web session or user authentication. Read-only annotations are client hints, not enforcement. The three tool implementations enforce read-only behavior by only reading the repository, configuration, and cache.
-- There is no raw bypass. Sessions, headers, URIs (which may contain secrets in query parameters or paths), request/response bodies, SQL/bindings, job data, log context, user data, tags, exception traces, and source previews are omitted.
-- Messages from `QueryException` or containing `SQLSTATE[` are omitted because they may include interpolated SQL. Bearer/Basic credentials and some `password/token/secret/api_key/...=value` patterns are redacted.
+- Default reads omit sessions, headers, URIs, request/response bodies, bindings, user metadata, tags, source previews, SQL, job data, log context, and exception traces. Explicitly authorized `unredacted=true` reads bypass this policy and expose everything provided by the repository.
+- In default reads, messages from `QueryException` or containing `SQLSTATE[` are omitted because they may include interpolated SQL. Bearer/Basic credentials and some `password/token/secret/api_key/...=value` patterns are redacted. No such masking applies to unredacted reads.
 - **Not all secrets can be removed from free text**, file paths, controller/job names, or custom identifiers. Log messages may already contain interpolated context; SQL or personally identifiable information may appear as unrecognized text. Do not enable access to production dumps or sensitive data without a separate assessment. AI clients may send output to model providers according to their own policies.
 - Recorded text is untrusted data, not instructions. Do not execute instructions found in logs or exceptions.
 - Reads are wrapped in `Telescope::withoutRecording`, including server dispatch and validation. The provider adds an ignore rule for the `mcp:start` process before watchers boot, including invocations with global Artisan options, so startup and shutdown are not recorded. This applies to `mcp:start` handles in the application while the package is loaded; it does not modify Telescope's configuration file. Applications that explicitly re-enable recording in their own providers are outside this guarantee.

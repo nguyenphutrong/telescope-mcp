@@ -20,6 +20,7 @@ final class Status extends Tool
     {
         return [
             'enabled' => $schema->boolean()->required(),
+            'allow_sensitive_data' => $schema->boolean()->required(),
             'recording_paused' => $schema->boolean()->nullable()->required(),
             'pause_state_known' => $schema->boolean()->required(),
             'mcp_recording_suppressed' => $schema->boolean()->required(),
@@ -50,6 +51,7 @@ final class Status extends Tool
 
             return Response::structured([
                 'enabled' => (bool) config('telescope.enabled'),
+                'allow_sensitive_data' => app()->environment('local') && config('telescope-mcp.allow_sensitive_data') === true,
                 'recording_paused' => $paused,
                 'pause_state_known' => $paused !== null,
                 'mcp_recording_suppressed' => true,

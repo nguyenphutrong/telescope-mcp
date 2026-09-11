@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — 2026-09-11
+
+### Added
+
+- Default-off `allow_sensitive_data` permission, reported by status, and explicit `unredacted=true` detail reads. Normal get/list calls retain their redaction policy.
+- Complete repository-entry access through bounded JSON text chunks and content-bound continuation cursors; stale cursors cannot mix different entry versions. Unredacted output can contain credentials and personal data.
+- Tests for permission enforcement, complete reconstruction, input validation, stale/cross-entry cursors, and real stdio continuation without recording new Telescope entries.
+
 ## 0.1.0 — 2026-09-10
 
 Initial experimental release for local development. Available from the GitHub tag and Packagist.
